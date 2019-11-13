@@ -1,3 +1,12 @@
+<#
+about_Functions				https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions
+about_Functions_Advanced		https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced
+about_Functions_Advanced_Methods	https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_methods
+about_Functions_Advanced_Parameters	https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters
+about_Functions_CmdletBindingAttribute	https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_cmdletbindingattribute
+about_Functions_OutputTypeAttribute	https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_outputtypeattribute
+#>
+
 FUNCTION Search-Scripts {
 <#
 .SYNOPSIS

@@ -67,6 +67,9 @@ the whole line of text matching the search
         } 
     }
 }
+# https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_ise_exe?view=powershell-5.1
+# https://learn.microsoft.com/en-us/powershell/scripting/windows-powershell/ise/introducing-the-windows-powershell-ise?view=powershell-7.3
+# export the PATH to <Out-GridView -OutputMode Multiple> and then pass to ISE.exe to open in tabs
 ################################################################################
 
 FUNCTION Add-TimeStamp

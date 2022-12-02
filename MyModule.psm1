@@ -65,6 +65,12 @@ the whole line of text matching the search
         ELSE { 
             $Result | Format-Table -GroupBy Path -Property LineNumber,Line -AutoSize 
         } 
+        ## Use GridView to select files to be opened in ISE
+        $Result | 
+            select Path | 
+            Out-GridView -OutputMode Multiple -Title 'Select one or more files to open...' | 
+            ForEach-Object { $psISE.CurrentPowerShellTab.Files.Add($_.Path) }    # Adds files to existing ISE console
+            #ForEach-Object { powershell_ise.exe $($_.Path) -NoProfile }         # Opens files in a ISE window
     }
 }
 # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_ise_exe?view=powershell-5.1

@@ -21,7 +21,10 @@ provided the search will return any string matching the keword as provided.
   The path and file type can be changed with parameter switches. 
   The default view groups results by the file in which they were found but 
 truncates the matching line of text, using the "-ListView" switch will show
-the whole line of text matching the search
+the whole line of text matching the search. 
+The Path is sent to "Out-GridView -Multiple", allowing selection of one or 
+more scripts to open in PowerShellISE for further review. 
+NOTE: the GridView window needs to close before you can use ISE. 
 .EXAMPLE
 	C:\> Search-Scripts -Keyword foreach
 ... will search all *.ps1 files from the root of C:\ containing the word "foreach"
@@ -65,12 +68,10 @@ the whole line of text matching the search
         ELSE { 
             $Result | Format-Table -GroupBy Path -Property LineNumber,Line -AutoSize 
         } 
-        ## Use GridView to select files to be opened in ISE
         $Result | 
-            select Path | 
-            Out-GridView -OutputMode Multiple -Title 'Select one or more files to open...' | 
-            ForEach-Object { $psISE.CurrentPowerShellTab.Files.Add($_.Path) }    # Adds files to existing ISE console
-            #ForEach-Object { powershell_ise.exe $($_.Path) -NoProfile }         # Opens files in a ISE window
+        select Path | sort Path -Unique | 
+        Out-GridView -OutputMode Multiple -Title 'Select one or more files to open...' | 
+        ForEach-Object { $psISE.CurrentPowerShellTab.Files.Add($_.Path) }  
     }
 }
 # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_ise_exe?view=powershell-5.1

@@ -157,6 +157,10 @@ Consider testing the input for common delimiters and using the split method
 Add an option to sort the output
 Add an option to send the output to clipboard
 Return the processed value as standard output
+20230421 - Wish list
+	Add as a parameter [string[]]$([version[]]($IPList) | Sort-Object)
+	Consider replacing clip.exe with Set-Clipboard
+	Consider using Get-Clipboard [-Format <ClipboardFormat>] [-TextFormatType <TextDataFormat>] [-Raw ] https://go.microsoft.com/fwlink/?LinkId=526219
 #>
 
 function Format-Array 

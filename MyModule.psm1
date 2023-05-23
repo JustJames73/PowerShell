@@ -152,41 +152,97 @@ FUNCTION Add-TimeStamp
 
 }
 ################################################################################
-<#
-Consider testing the input for common delimiters and using the split method
-Add an option to sort the output
-Add an option to send the output to clipboard
-Return the processed value as standard output
-20230421 - Wish list
-	Add as a parameter [string[]]$([version[]]($IPList) | Sort-Object)
-	Consider replacing clip.exe with Set-Clipboard
-	Consider using Get-Clipboard [-Format <ClipboardFormat>] [-TextFormatType <TextDataFormat>] [-Raw ] https://go.microsoft.com/fwlink/?LinkId=526219
-#>
-
-function Format-Array 
-{
+function ConvertTo-PowerShellArray {
 <#
 .SYNOPSIS
-Paste a line separated list at the prompt to be re-formatted into the @('val1','val2') array format.
+Provide a list of values to be returned as a PowerShell Array to the screen and clipboard. 
 .DESCRIPTION
-The Format-Array function will take a line separated list, such as one copied 
-from a spreadsheet, and rearrange it into a quoted & comma separated list 
-compatible with the PowerShell array. The array is copied to the clipboard. 
+The -IndputList can be a space, comma or line separated list of values that can 
+be pasted from a spreasheet and rearrange it into a quoted & comma separated list. 
+The -SortIP switch can be used to properly sort IP addresses in ascending order. 
+The output is sent both to the screen and the clipboard for pasting. 
+.ALIAS
+    CTA
+    Format-Array
 .EXAMPLE
-	C:\> Format-Array
-	Paste list
-	: Val1
-	Val2
-	Val3
+    $inputList = 'thing1 thing2 thing3'
+    $result = ConvertTo-PowerShellArray -InputList $inputList
+    $result  # Outputs the formatted array
+
+    # Alternatively, you can use the aliases "CTA" or "Format-Array"
+    $result2 = CTA -InputList $inputList
+    $result2  # Outputs the formatted array
+
+    $result3 = Format-Array -InputList $inputList
+    $result3  # Outputs the formatted array
+
+    $inputList = '192.168.10.10 192.168.2.1 192.168.1.100'
+    $result4 = ConvertTo-PowerShellArray -InputList $inputList -SortIP
+    $result4  # Outputs the formatted array with sorted IP addresses
 .PARAMETER <>
-None
+    -InputList (Parameter)
+        A comma separated list stored from a string or variable. 
+        If not passed with a variable, the script will prompt for input 
+        and a line separated list can be pasted. 
+    -SortIP (Switch)
+        Use the [IPAddress] type to allow for sorting 
  #>
-    $C0 = ($(Read-Host -Prompt "paste list`n") -isplit "`n");
-    foreach ($I in $C0) { $C1 += ([string]::Concat("`'"+$(($i).TrimStart().TrimEnd())+"`',")) };
-    $C2 = @($C1.Substring(0,$($C1.Length-1))); 
-    $C2 = ([string]::Concat("@`(" + $C2 + "`)")); 
-    $C2 | clip.exe
-    
+
+    [Alias("CTA", "Format-Array")]
+    param (
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$InputList,
+
+        [switch]$SortIP
+    )
+
+    # Remove leading/trailing spaces and line breaks
+    $cleanedList = $InputList.Trim()
+
+    # Determine the delimiter based on the format of the input list
+    if ($cleanedList -match ',') {
+        $delimiter = ','
+    }
+    elseif ($cleanedList -match '\r?\n') {
+        $delimiter = '\r?\n'
+    }
+    else {
+        $delimiter = ' '
+    }
+
+    # Split the cleaned list into an array using the determined delimiter
+    $array = $cleanedList -split $delimiter
+
+    # Remove leading/trailing spaces from each array element
+    $trimmedArray = $array.Trim()
+
+    # Sort the IP address list in ascending order if the -SortIP switch is used
+    if ($SortIP) {
+        $sortedArray = $trimmedArray | Sort-Object -Property {
+            if ($_ -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}') {
+                [IPAddress]$ip = $_
+                $ip
+            }
+            else {
+                $_
+            }
+        }
+    }
+    else {
+        $sortedArray = $trimmedArray
+    }
+
+    # Enclose each array element in single quotes
+    $quotedArray = $sortedArray | ForEach-Object { "'$_'" }
+
+    # Join the array elements with commas and enclose the entire array in @()
+    $result = '@(' + ($quotedArray -join ',') + ')'
+
+    # Copy the result to the clipboard
+    $result | Set-Clipboard
+
+    # Output the resulting array
+    Write-Output $result
 }
 ################################################################################
 FUNCTION Report-GroupMembers {

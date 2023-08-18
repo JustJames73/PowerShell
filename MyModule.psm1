@@ -283,3 +283,68 @@ function Get-Excuse
     $matches[1]
   }
 }
+
+################################################################################
+# Generate-RandomPassword generates a random string with rules for placement of specific character classes. 
+# In this case it only allows the use of SPECIFIC special characters at char 2-7, and starts/ends with AlphaNum chars
+function Generate-RandomPassword {
+    param (
+        [Parameter(Mandatory=$false)] 
+        [string]$Username
+    )
+
+    Begin
+    {
+        function Get-RandomCharacter {
+            param ( [char[]]$Characters )
+            $index = Get-Random -Minimum 0 -Maximum $Characters.Length
+            $Characters[$index]
+        }
+
+        # Character classes 
+        $charAlpha = @([char[]](65..90) + [char[]](97..122))
+        $charNumeric = @([char[]](48..57))
+        $charSpecial = @([char[]](33,35,36,37,40,41,43,47,58,61,63))
+
+        $length = Get-Random -Minimum 14 -Maximum 21
+    }
+
+    Process
+    {
+        $password = $null
+
+        while ($password -eq $null) {
+            $chars = 1..$length | ForEach-Object {
+                if ($_ -eq 1) {
+                    # First character (must be a letter)
+                    $char = Get-RandomCharacter -Characters $charAlpha
+                }
+                elseif ($_ -eq $length) {
+                    # Last character (must be a letter)
+                    $char = Get-RandomCharacter -Characters $charAlpha
+                }
+                elseif ($_ -ge 2 -and $_ -le 7) {
+                    # Special character position
+                    $char = Get-RandomCharacter -Characters @($charAlpha + $charSpecial + $charNumeric )
+                }
+                else {
+                    # All other positions (letters or numbers)
+                    $char = Get-RandomCharacter -Characters @($charAlpha + $charNumeric)
+                }
+                $char
+            }
+
+            $newPassword = -join $chars
+
+            # Check if the generated password satisfies the criteria
+            if ($newPassword -cmatch '[A-Z]' -and $newPassword -cmatch '[a-z]' -and $newPassword -cmatch '\d' -and $newPassword -cmatch '\W' -and $newPassword <# -notlike "*$Username*" #>) {
+                $password = $newPassword
+            }
+        }
+    }
+    
+    End
+    {
+        $password
+    }
+}

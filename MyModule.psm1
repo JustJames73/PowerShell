@@ -499,41 +499,65 @@ This function may require access to external word list files. Ensure appropriate
 }
 #####################################################################################
 <#
-The Test-MultipleConnections function allows you to supply multiple hosts and ports. 
-Both the hosts and ports can be supplied by a multivalued string array
-  Ex: $hosts = 'host1','host2'; $ports= 80, 443
-The function will return results in a table format with timestamps
-Sample useage:
-  # Define IP addresses and ports
-  $ipList = "1.1.1.1", "1.1.1.2"
-  $portList = 80, 443
-  # Run the test
-  Test-MultipleConnections -ipList $ipList -portList $portList
+.SYNOPSIS
+.DESCRIPTION
+.VERSION
+    2.2403.22
+.NOTES
+    The Test-MultipleConnections function allows you to supply multiple hosts and ports. 
+    Both the hosts and ports can be supplied by a multivalued string array
+      Ex: $hosts = 'host1','host2'; $ports= 80, 443
+    The function will return results in a table format with timestamps
+    Sample useage:
+      # Define IP addresses and ports
+      $ipList = "1.1.1.1", "1.1.1.2"
+      $portList = 80, 443
+      # Run the test
+      Test-MultipleConnections -ipList $ipList -portList $portList
 #>
 
 function Test-MultipleConnections {
     param (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string[]]$ipList,
+
+        [Parameter(Mandatory = $false)]
         [int[]]$portList
     )
+    
+    BEGIN {
+        # Initialize arrays to store results
+        $results = @()
 
-    # Initialize arrays to store results
-    $results = @()
 
-    # Loop through each IP address in the list
-    foreach ($ip in $ipList) {
-        # Loop through each port in the list
-        foreach ($port in $portList) {
-            # Test the connection
-            $testResult = Test-NetConnection -ComputerName $ip -Port $port -InformationLevel Detailed
+    }
 
-            # Add the result to the results array with a timestamp
-            $results += ($testResult | select @{name='TimeStamp';expression={$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')}}, SourceAddress, RemoteAddress, RemotePort, PingSucceeded, TcpTestSucceeded )
+    PROCESS {
+        # Loop through each IP address in the list
+        foreach ($ip in $ipList) {
+            # Loop through each port in the list
+            IF ($portList) {
+                foreach ($port in $portList) {
+                    # Test the connection
+                    $testResult = Test-NetConnection -ComputerName $ip -Port $port -InformationLevel Detailed
+
+                    # Add the result to the results array with a timestamp
+                    $results += ($testResult | select @{name='TimeStamp';expression={$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')}}, SourceAddress, RemoteAddress, PingSucceeded, RemotePort, TcpTestSucceeded )
+                }
+            }
+            ELSE {
+                # Test the connection
+                $testResult = Test-NetConnection -ComputerName $ip -InformationLevel Detailed
+
+                # Add the result to the results array with a timestamp
+                $results += ($testResult | select @{name='TimeStamp';expression={$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')}}, SourceAddress, RemoteAddress, PingSucceeded, @{name='RemotePort';expression={'NA'}}, @{name='TcpTestSucceeded';expression={'NA'}} )
+            }
         }
     }
 
-
-    # Output the results
-    Write-Output "Results:"
-    $results | Format-Table -AutoSize
+    END {
+        # Output the results
+        RETURN $results | Format-Table -AutoSize
+    }
 }

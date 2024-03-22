@@ -407,7 +407,7 @@ This function may require access to external word list files. Ensure appropriate
         Write-Verbose -Message "Word list file '$wordListFile' not found. Searching for .words files in the current directory..."
 
         # Search for *.word files in the current directory
-        $wordListFiles = Get-ChildItem -Path $pwd -Filter "*.words" -File
+        $wordListFiles = Get-ChildItem -Path $pwd -Filter "*.words" -File -Recurse
         Write-Verbose -Message "Found the following words list: $wordListFiles"
 
         # If no *.words files found, throw an error

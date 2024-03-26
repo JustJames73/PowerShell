@@ -502,7 +502,7 @@ This function may require access to external word list files. Ensure appropriate
 .SYNOPSIS
 .DESCRIPTION
 .VERSION
-    2.2403.22
+    2.2403.25
 .NOTES
     The Test-MultipleConnections function allows you to supply multiple hosts and ports. 
     Both the hosts and ports can be supplied by a multivalued string array
@@ -514,6 +514,7 @@ This function may require access to external word list files. Ensure appropriate
       $portList = 80, 443
       # Run the test
       Test-MultipleConnections -ipList $ipList -portList $portList
+    20230325: added a progress bar based on the count of the $ipList
 #>
 
 function Test-MultipleConnections {
@@ -530,12 +531,22 @@ function Test-MultipleConnections {
         # Initialize arrays to store results
         $results = @()
 
+        # Counts for progress
+        $ipTotal = $ipList.count
+        $ipCounter = 0
 
     }
 
     PROCESS {
         # Loop through each IP address in the list
         foreach ($ip in $ipList) {
+#region - progressbar
+            # Increment the counter
+            $ipCounter++
+            # Write the progress bar
+            Write-Progress -Activity 'Testing' -Status "Testing host $ipCounter of $ipTotal" -PercentComplete (($ipCounter / $ipTotal) * 100) -Id 1
+#endregion - progressbar
+
             # Loop through each port in the list
             IF ($portList) {
                 foreach ($port in $portList) {
@@ -553,6 +564,7 @@ function Test-MultipleConnections {
                 # Add the result to the results array with a timestamp
                 $results += ($testResult | select @{name='TimeStamp';expression={$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')}}, SourceAddress, RemoteAddress, PingSucceeded, @{name='RemotePort';expression={'NA'}}, @{name='TcpTestSucceeded';expression={'NA'}} )
             }
+            Write-Progress -Activity "Testing" -Status "Completed" -Completed -Id 1
         }
     }
 
@@ -561,3 +573,5 @@ function Test-MultipleConnections {
         RETURN $results | Format-Table -AutoSize
     }
 }
+
+Set-Alias -Name TMC -Value Test-MultipleConnections

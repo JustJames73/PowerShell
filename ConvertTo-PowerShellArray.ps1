@@ -34,7 +34,7 @@ The output is sent both to the screen and the clipboard for pasting.
  #>
 
 
-    #[Alias("CTA", "Format-Array")]
+    [Alias("CTA", "Format-Array")]
     param (
         [string]$InputList = $(Get-Clipboard) ,
         [switch]$Sort

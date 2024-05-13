@@ -155,11 +155,11 @@ FUNCTION Add-TimeStamp
 function ConvertTo-PowerShellArray {
 <#
 .SYNOPSIS
-Provide a list of values to be returned as a PowerShell Array to the screen and clipboard. 
+Use text in the clipboard to create a powershell array value in plain text. 
 .DESCRIPTION
 The -IndputList can be a space, comma or line separated list of values that can 
-be pasted from a spreasheet and rearrange it into a quoted & comma separated list. 
-The -SortIP switch can be used to properly sort IP addresses in ascending order. 
+be copied from a spreasheet and rearrange it into a quoted & comma separated list. 
+The -Sort switch can be used to properly sort text or IP addresses in ascending order. 
 The output is sent both to the screen and the clipboard for pasting. 
 .ALIAS
     CTA
@@ -177,72 +177,56 @@ The output is sent both to the screen and the clipboard for pasting.
     $result3  # Outputs the formatted array
 
     $inputList = '192.168.10.10 192.168.2.1 192.168.1.100'
-    $result4 = ConvertTo-PowerShellArray -InputList $inputList -SortIP
+    $result4 = ConvertTo-PowerShellArray -InputList $inputList -Sort
     $result4  # Outputs the formatted array with sorted IP addresses
 .PARAMETER <>
     -InputList (Parameter)
-        A comma separated list stored from a string or variable. 
-        If not passed with a variable, the script will prompt for input 
-        and a line separated list can be pasted. 
-    -SortIP (Switch)
-        Use the [IPAddress] type to allow for sorting 
- #>
+        Use clipboard content by default or specify as a quoted string. 
+    -Sort (Switch)
+        Sort in ascending order, IPv4 addresses are detected and 
+        sorted appropriately. 
+ #>
+
 
     [Alias("CTA", "Format-Array")]
     param (
-        [Parameter(Mandatory=$true, Position=0)]
-        [string]$InputList,
-
-        [switch]$SortIP
+        [string]$InputList = $(Get-Clipboard) ,
+        [switch]$Sort
     )
 
-    # Remove leading/trailing spaces and line breaks
-    $cleanedList = $InputList.Trim()
-
-    # Determine the delimiter based on the format of the input list
-    if ($cleanedList -match ',') {
+   # Determine the delimiter based on the format of the input list
+   if ($InputList -match ',') {
         $delimiter = ','
     }
-    elseif ($cleanedList -match '\r?\n') {
+    elseif ($InputList -match '\r?\n') {
         $delimiter = '\r?\n'
     }
     else {
         $delimiter = ' '
     }
 
-    # Split the cleaned list into an array using the determined delimiter
-    $array = $cleanedList -split $delimiter
+    # Trim blank spaces, remove blank lines
+    $cleanedList = ($InputList -split $delimiter).Trim() | Where-Object { $_.Trim() -ne '' }
 
-    # Remove leading/trailing spaces from each array element
-    $trimmedArray = $array.Trim()
-
-    # Sort the IP address list in ascending order if the -SortIP switch is used
-    if ($SortIP) {
-        $sortedArray = $trimmedArray | Sort-Object -Property {
-            if ($_ -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}') {
-                [IPAddress]$ip = $_
-                $ip
-            }
-            else {
-                $_
-            }
-        }
-    }
-    else {
-        $sortedArray = $trimmedArray
+    # Sort the IP address list in ascending order if the -Sort switch is used
+    if ($Sort) {
+        $cleanedList = $(
+            if ($cleanedList[0] -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}') { [string[]]$([version[]]($cleanedList) | Sort-Object -Unique) }
+            else { $cleanedList | Sort-Object -Unique }
+            )
     }
 
-    # Enclose each array element in single quotes
-    $quotedArray = $sortedArray | ForEach-Object { "'$_'" }
+    # Add quotes to each string
+    $cleanedList = $cleanedList | ForEach-Object { "'$_'" }
 
-    # Join the array elements with commas and enclose the entire array in @()
-    $result = '@(' + ($quotedArray -join ',') + ')'
+    # Join the cleaned list with commas and format as PowerShell array
+    $result = '@(' + ($cleanedList -join ',') + ')'
 
-    # Copy the result to the clipboard
-    $result | Set-Clipboard
-
-    # Output the resulting array
+    # Output result to console
     Write-Output $result
+
+    # Copy result to clipboard
+    $result | Set-Clipboard
 }
 ################################################################################
 FUNCTION Report-GroupMembers {

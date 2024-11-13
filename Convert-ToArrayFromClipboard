@@ -1,0 +1,25 @@
+function Convert-ToArrayFromClipboard {
+    # Get the text from the clipboard
+    $InputList = Get-Clipboard
+
+    # Check if clipboard is empty
+    if (-not $InputList) {
+        Write-Host "Clipboard is empty. Please copy some text first."
+        return
+    }
+
+    # Step 1: Split the input into lines using `\r?\n` as the delimiter (handles both Windows and Unix line endings)
+    $lines = $InputList -split "`r?`n"
+
+    # Step 2: Remove any blank lines and trim whitespace
+    $lines = $lines | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+
+    # Step 3: Convert each line to a single-quoted string and join them with a comma
+    $arrayString = "@('" + ($lines -join "','") + "')"
+
+    # Step 4: Output the result to the console
+    Write-Output $arrayString
+
+    # Step 5: Copy the result to the clipboard
+    Set-Clipboard -Value $arrayString
+}

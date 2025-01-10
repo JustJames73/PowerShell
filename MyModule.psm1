@@ -153,81 +153,102 @@ FUNCTION Add-TimeStamp
 }
 ################################################################################
 function ConvertTo-PowerShellArray {
-<#
-.SYNOPSIS
-Use text in the clipboard to create a powershell array value in plain text. 
-.DESCRIPTION
-The -IndputList can be a space, comma or line separated list of values that can 
-be copied from a spreasheet and rearrange it into a quoted & comma separated list. 
-The -Sort switch can be used to properly sort text or IP addresses in ascending order. 
-The output is sent both to the screen and the clipboard for pasting. 
-.ALIAS
-    CTA
-    Format-Array
-.EXAMPLE
-    $inputList = 'thing1 thing2 thing3'
-    $result = ConvertTo-PowerShellArray -InputList $inputList
-    $result  # Outputs the formatted array
-
-    # Alternatively, you can use the aliases "CTA" or "Format-Array"
-    $result2 = CTA -InputList $inputList
-    $result2  # Outputs the formatted array
-
-    $result3 = Format-Array -InputList $inputList
-    $result3  # Outputs the formatted array
-
-    $inputList = '192.168.10.10 192.168.2.1 192.168.1.100'
-    $result4 = ConvertTo-PowerShellArray -InputList $inputList -Sort
-    $result4  # Outputs the formatted array with sorted IP addresses
-.PARAMETER <>
-    -InputList (Parameter)
-        Use clipboard content by default or specify as a quoted string. 
-    -Sort (Switch)
-        Sort in ascending order, IPv4 addresses are detected and 
-        sorted appropriately. 
- #>
-
-
+    <#
+    .SYNOPSIS
+    Converts clipboard text or input string into a PowerShell array format.
+    
+    .DESCRIPTION
+    Takes text from the clipboard or a provided string and converts it into a properly formatted
+    PowerShell array. Handles both Windows 10 and 11 clipboard formats, and properly processes
+    multi-line input including Distinguished Names and other complex strings.
+    
+    The function now uses a smarter approach to handle clipboard data, ensuring line breaks
+    are properly detected regardless of how the operating system provides the clipboard content.
+    
+    .PARAMETER InputList
+    Text to convert into an array. Defaults to clipboard content.
+    
+    .PARAMETER Sort
+    Switch to sort the output in ascending order. Handles both IP addresses and regular text.
+    
+    .EXAMPLE
+    # Multi-line Distinguished Names from clipboard
+    # CN=User1,OU=Department,DC=contoso,DC=com
+    # CN=User2,OU=Department,DC=contoso,DC=com
+    ConvertTo-PowerShellArray
+    
+    # Comma-separated input
+    ConvertTo-PowerShellArray -InputList "item1,item2,item3"
+    
+    # Space-separated input
+    ConvertTo-PowerShellArray -InputList "item1 item2 item3"
+    #>
+    
     [Alias("CTA", "Format-Array")]
     param (
-        [string]$InputList = $(Get-Clipboard) ,
+        [string]$InputList = $(Get-Clipboard -Raw),
         [switch]$Sort
     )
 
-   # Determine the delimiter based on the format of the input list
-   if ($InputList -match ',') {
-        $delimiter = ','
-    }
-    elseif ($InputList -match '\r?\n') {
-        $delimiter = '\r?\n'
-    }
-    else {
-        $delimiter = ' '
+    function Get-BestDelimiter {
+        param ([string]$text)
+        
+        # Test for multiple DN lines
+        if (($text -split "\r?\n").Count -gt 1 -and $text -match "^CN=|^OU=|^DC=") {
+            return "DN multiline"
+        }
+        elseif ($text -match "^CN=|^OU=|^DC='") {
+            if ($text -match "\s") { return "CN with Spaces" }
+            return "CN no spaces"
+        }
+        elseif (($text -split "\r?\n").Count -gt 2) {
+            return "crlf"
+        }
+        elseif ($text -match ",") {
+            return "comma"
+        }
+        elseif ($text -match "\s") {
+            return "space"
+        }
+        return $null
     }
 
-    # Trim blank spaces, remove blank lines
-    $cleanedList = ($InputList -split $delimiter).Trim() | Where-Object { $_.Trim() -ne '' }
+    $delimiterType = Get-BestDelimiter -text $InputList
 
-    # Sort the IP address list in ascending order if the -Sort switch is used
+    $cleanedList = switch ($delimiterType) {
+        "DN multiline" {
+            ($InputList -split "\r?\n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        }
+        "crlf" { 
+            ($InputList -split "\r?\n") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        }
+        "comma" { 
+            ($InputList -split ",") | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        }
+        "space" { 
+            ($InputList -split "\s+") | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        }
+        default {
+            @($InputList)
+        }
+    }
+
     if ($Sort) {
-        $cleanedList = $(
-            if ($cleanedList[0] -match '\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}') { [string[]]$([version[]]($cleanedList) | Sort-Object -Unique) }
-            else { $cleanedList | Sort-Object -Unique }
-            )
+        $cleanedList = if ($cleanedList[0] -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+            [string[]]$([version[]]($cleanedList) | Sort-Object -Unique)
+        }
+        else {
+            $cleanedList | Sort-Object -Unique
+        }
     }
 
-    # Add quotes to each string
-    $cleanedList = $cleanedList | ForEach-Object { "'$_'" }
-
-    # Join the cleaned list with commas and format as PowerShell array
-    $result = '@(' + ($cleanedList -join ',') + ')'
-
-    # Output result to console
+    $quotedList = $cleanedList | ForEach-Object { "'$($_ -replace "'", "''")'" }
+    $result = '@(' + ($quotedList -join ',') + ')'
+    
     Write-Output $result
-
-    # Copy result to clipboard
     $result | Set-Clipboard
 }
+
 ################################################################################
 FUNCTION Report-GroupMembers {
 	Param([string]$GroupName = $(Read-Host -Prompt "Enter group name"))
@@ -268,21 +289,9 @@ function Write-Color([String[]]$Text, [ConsoleColor[]]$Color = "White", [int]$St
 
 ################################################################################
 
-function Get-Excuse
-{
-  $url = 'http://pages.cs.wisc.edu/~ballard/bofh/bofhserver.pl'
-  $ProgressPreference = 'SilentlyContinue'
-  $page = Invoke-WebRequest -Uri $url -UseBasicParsing
-  $pattern = '(?m)<br><font size = "\+2">(.+)'
-  if ($page.Content -match $pattern)
-  {
-    $matches[1]
-  }
-}
-
-################################################################################
 # Generate-RandomPassword generates a random string with rules for placement of specific character classes. 
 # In this case it only allows the use of SPECIFIC special characters at char 2-7, and starts/ends with AlphaNum chars
+
 function Generate-RandomPassword {
     param (
         [Parameter(Mandatory=$false)] 
